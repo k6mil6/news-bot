@@ -8,8 +8,7 @@ import (
 	"time"
 
 	"github.com/k6mil6/news-bot/internal/model"
-	"github.com/k6mil6/news-bot/internal/source"
-
+	src "github.com/k6mil6/news-bot/internal/source"
 	"github.com/tomakado/containers/set"
 )
 
@@ -40,7 +39,6 @@ func New(
 	sourceProvider SourceProvider,
 	fetchInterval time.Duration,
 	filterKeywords []string,
-
 ) *Fetcher {
 	return &Fetcher{
 		articles:       articleStorage,
@@ -78,7 +76,7 @@ func (f *Fetcher) Fetch(ctx context.Context) error {
 
 	var wg sync.WaitGroup
 
-	for _, src := range sources {
+	for _, source := range sources {
 		wg.Add(1)
 
 		go func(source Source) {
@@ -95,7 +93,7 @@ func (f *Fetcher) Fetch(ctx context.Context) error {
 				return
 			}
 
-		}(source.NewRSSSourceFromModel(src))
+		}(src.NewRSSSourceFromModel(source))
 	}
 
 	wg.Wait()
@@ -108,6 +106,7 @@ func (f *Fetcher) processItems(ctx context.Context, source Source, items []model
 		item.Date = item.Date.UTC()
 
 		if f.itemShouldBeSkipped(item) {
+			log.Printf("[INFO] Skipping item %q from source %q", item.Title, source.Name())
 			continue
 		}
 
@@ -129,8 +128,7 @@ func (f *Fetcher) itemShouldBeSkipped(item model.Item) bool {
 	categoriesSet := set.New(item.Categories...)
 
 	for _, keyword := range f.filterKeywords {
-		titleContainsKeyword := strings.Contains(strings.ToLower(item.Title), keyword)
-		if categoriesSet.Contains(keyword) || titleContainsKeyword {
+		if categoriesSet.Contains(keyword) || strings.Contains(strings.ToLower(item.Title), keyword) {
 			return true
 		}
 	}

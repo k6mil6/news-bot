@@ -13,6 +13,10 @@ type SourcePostgresStorage struct {
 	db *sqlx.DB
 }
 
+func NewSourceStorage(db *sqlx.DB) *SourcePostgresStorage {
+	return &SourcePostgresStorage{db: db}
+}
+
 func (s *SourcePostgresStorage) Sources(ctx context.Context) ([]model.Source, error) {
 	conn, err := s.db.Connx(ctx)
 	if err != nil {
@@ -56,21 +60,33 @@ func (s *SourcePostgresStorage) Add(ctx context.Context, source model.Source) (i
 
 	row := conn.QueryRowxContext(
 		ctx,
-		`INSERT INTO sources (name, feed_url, created_at) VALUES ($1, $2, $3) RETURNING id`,
+		`INSERT INTO sources (name, feed_url, priority) VALUES ($1, $2, $3) RETURNING id`,
 		source.Name,
 		source.FeedURL,
-		source.CreatedAt,
+		source.Priority,
 	)
 
-	if err := row.Err(); err != nil {
+	if err = row.Err(); err != nil {
 		return 0, err
 	}
 
-	if err := row.Scan(&id); err != nil {
+	if err = row.Scan(&id); err != nil {
 		return 0, nil
 	}
 
 	return id, nil
+}
+
+func (s *SourcePostgresStorage) SetPriority(ctx context.Context, id int64, priority int) error {
+	conn, err := s.db.Connx(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	_, err = conn.ExecContext(ctx, `UPDATE sources SET priority = $1 WHERE id = $2`, priority, id)
+
+	return err
 }
 
 func (s *SourcePostgresStorage) Delete(ctx context.Context, id int64) error {
