@@ -32,7 +32,12 @@ func main() {
 		log.Printf("[ERROR] failed to connect to db: %v", err)
 		return
 	}
-	defer db.Close()
+	defer func(db *sqlx.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Printf("[ERROR] failed to close db: %v", err)
+		}
+	}(db)
 
 	var (
 		articleStorage = storage.NewArticleStorage(db)
@@ -43,10 +48,14 @@ func main() {
 			config.Get().FetchInterval,
 			config.Get().FilterKeywords,
 		)
-		summariser = summary.NewOpenAISummariser(
-			config.Get().OpenAIKey,
-			config.Get().OpenAIModel,
-			config.Get().OpenAIPrompt,
+		//summariser = summary.NewOpenAISummariser(
+		//	config.Get().OpenAIKey,
+		//	config.Get().OpenAIModel,
+		//	config.Get().OpenAIPrompt,
+		//)
+
+		summariser = summary.NewLocalSummariser(
+			config.Get().HTTPServerURL,
 		)
 		notifier = notifier.New(
 			articleStorage,
@@ -77,6 +86,39 @@ func main() {
 			bot.ViewCmdListSources(sourceStorage),
 		),
 	)
+	newsBot.RegisterCmdView(
+		"deletesource",
+		middleware.AdminOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdDeleteSource(sourceStorage),
+		),
+	)
+	newsBot.RegisterCmdView(
+		"getsource",
+		middleware.AdminOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdGetSource(sourceStorage),
+		),
+	)
+	newsBot.RegisterCmdView(
+		"setpriority",
+		middleware.AdminOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdSetPriority(sourceStorage),
+		),
+	)
+	newsBot.RegisterCmdView(
+		"stopnotifyingfor",
+		middleware.AdminOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdStopNotifyingFor(notifier),
+		),
+	)
+
+	if err := bot.SetCommands(botAPI, config.Get().TelegramChannelID); err != nil {
+		log.Printf("[ERROR] failed to set commands: %s", err)
+		return
+	}
 
 	go func(ctx context.Context) {
 		if err = fetcher.Start(ctx); err != nil {

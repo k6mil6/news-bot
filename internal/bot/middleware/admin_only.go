@@ -28,7 +28,7 @@ func AdminOnly(channelID int64, next botkit.ViewFunc) botkit.ViewFunc {
 
 		if _, err = bot.Send(tgbotapi.NewMessage(
 			update.Message.Chat.ID,
-			"Только для админов\\.",
+			"Этот бот доступен только для админов.",
 		)); err != nil {
 			return err
 		}

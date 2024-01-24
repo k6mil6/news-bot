@@ -8,6 +8,7 @@ import (
 
 func ViewCmdStart() botkit.ViewFunc {
 	return func(ctx context.Context, bot *tgbotapi.BotAPI, update tgbotapi.Update) error {
+
 		msg := tgbotapi.NewMessage(update.FromChat().ID, "Hello world")
 		_, err := bot.Send(msg)
 		return err

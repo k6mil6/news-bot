@@ -3,7 +3,6 @@ package summary
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/sashabaranov/go-openai"
 	"log"
 	"strings"
@@ -46,21 +45,13 @@ func (s *OpenAISummariser) Summarise(text string) (string, error) {
 	request := openai.ChatCompletionRequest{
 		Model: s.model,
 		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: s.prompt,
-			},
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: text,
-			},
+			{Role: openai.ChatMessageRoleSystem, Content: s.prompt},
+			{Role: openai.ChatMessageRoleUser, Content: text},
 		},
 		MaxTokens:   1024,
 		Temperature: 1,
 		TopP:        1,
 	}
-
-	fmt.Println(request)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
@@ -74,12 +65,11 @@ func (s *OpenAISummariser) Summarise(text string) (string, error) {
 		return "", errors.New("no choices in openai response")
 	}
 
-	rawSummary := strings.TrimSpace(resp.Choices[0].Message.Content)
-	if strings.HasSuffix(rawSummary, ".") {
-		return rawSummary, nil
+	summary := resp.Choices[0].Message.Content
+	summary = strings.TrimSpace(summary)
+	if !strings.HasSuffix(summary, ".") {
+		summary += "."
 	}
 
-	sentences := strings.Split(rawSummary, ".")
-
-	return strings.Join(sentences[:len(sentences)-1], ".") + ".", nil
+	return summary, nil
 }

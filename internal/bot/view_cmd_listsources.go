@@ -5,7 +5,6 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/k6mil6/news-bot/internal/botkit"
-	"github.com/k6mil6/news-bot/internal/botkit/markup"
 	"github.com/k6mil6/news-bot/internal/model"
 	"github.com/samber/lo"
 	"sort"
@@ -39,20 +38,10 @@ func ViewCmdListSources(lister SourceLister) botkit.ViewFunc {
 		reply := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
 		reply.ParseMode = "MarkdownV2"
 
-		if _, err = bot.Send(reply); err != nil {
+		if _, err := bot.Send(reply); err != nil {
 			return err
 		}
 
 		return nil
 	}
-}
-
-func formatSource(source model.Source) string {
-	return fmt.Sprintf(
-		"🌐 *%s*\nID: `%d`\nURL фида: %s\nПриоритет: %d",
-		markup.EscapeForMarkdown(source.Name),
-		source.ID,
-		markup.EscapeForMarkdown(source.FeedURL),
-		source.Priority,
-	)
 }

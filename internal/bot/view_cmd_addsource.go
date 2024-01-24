@@ -47,7 +47,7 @@ func ViewCmdAddSource(storage SourceStorage) botkit.ViewFunc {
 
 		reply.ParseMode = "MarkdownV2"
 
-		if _, err = bot.Send(reply); err != nil {
+		if _, err := bot.Send(reply); err != nil {
 			return err
 		}
 

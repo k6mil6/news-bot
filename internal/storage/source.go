@@ -66,11 +66,11 @@ func (s *SourcePostgresStorage) Add(ctx context.Context, source model.Source) (i
 		source.Priority,
 	)
 
-	if err = row.Err(); err != nil {
+	if err := row.Err(); err != nil {
 		return 0, err
 	}
 
-	if err = row.Scan(&id); err != nil {
+	if err := row.Scan(&id); err != nil {
 		return 0, nil
 	}
 

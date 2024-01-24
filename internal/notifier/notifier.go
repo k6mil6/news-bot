@@ -71,6 +71,10 @@ func (n *Notifier) Start(ctx context.Context) error {
 	}
 }
 
+func (n *Notifier) StopNotifyingFor(duration time.Duration) {
+	n.sendInterval = duration
+}
+
 func (n *Notifier) SelectAndSendArticle(ctx context.Context) error {
 	topOneArticles, err := n.articles.AllNotPosted(ctx, 1)
 	if err != nil {
@@ -88,7 +92,7 @@ func (n *Notifier) SelectAndSendArticle(ctx context.Context) error {
 		return err
 	}
 
-	if err = n.SendArticle(article, summary); err != nil {
+	if err := n.SendArticle(article, summary); err != nil {
 		return err
 	}
 
@@ -125,8 +129,19 @@ func (n *Notifier) extractSummary(article model.Article) (string, error) {
 
 var redundantNewLines = regexp.MustCompile(`\n{3,}`)
 
+const readMoreText = "\n\nЧитать далее ->"
+
 func cleanupText(text string) string {
-	return redundantNewLines.ReplaceAllString(text, "\n")
+	cleanText := redundantNewLines.ReplaceAllString(text, "\n")
+	return CutStringToWords(strings.Replace(cleanText, "Читать далее", readMoreText, 1), 200)
+}
+
+func CutStringToWords(str string, numWords int) string {
+	words := strings.Fields(str)
+	if len(words) <= numWords {
+		return str + readMoreText
+	}
+	return strings.Join(words[:numWords], " ")
 }
 
 func (n *Notifier) SendArticle(article model.Article, summary string) error {
