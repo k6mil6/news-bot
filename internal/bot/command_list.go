@@ -6,28 +6,36 @@ import (
 
 var adminCommands = []tgbotapi.BotCommand{
 	{
-		Command:     "listsources",
+		Command:     "list_sources",
 		Description: "Команда для получения списка источников",
 	},
 	{
-		Command:     "deletesource",
-		Description: "Команда для удаления источника, по его идентификатору (/deletesource <идентификатор>)",
+		Command:     "delete_source",
+		Description: "Команда для удаления источника, по его идентификатору (/delete_source <идентификатор>)",
 	},
 	{
-		Command:     "getsource",
-		Description: "Команда для получения источника по его идентификатору (/getsource <идентификатор>)",
+		Command:     "get_source",
+		Description: "Команда для получения источника по его идентификатору (/get_source <идентификатор>)",
 	},
 	{
-		Command:     "setpriority",
-		Description: `Команда для установки приоритета (/setpriority {"source_id": <идентификатор>, "priority": <приоритет>})`,
+		Command:     "set_priority",
+		Description: `Команда для установки приоритета (/set_priority {"source_id": <идентификатор>, "priority": <приоритет>})`,
 	},
 	{
-		Command:     "stopnotifyingfor",
-		Description: "Команда для остановки постинга статей (/stopnotifyingfor <длительность>)",
+		Command:     "stop_notifying_for",
+		Description: "Команда для остановки постинга статей (/stop_notifying_for <длительность>)",
 	},
 	{
-		Command:     "addsource",
-		Description: `Команда для добавления источника (/addsource {"name": <имя>, ""url": <адрес>, "priority": <приоритет>})`,
+		Command:     "add_source",
+		Description: `Команда для добавления источника (/add_source {"name": <имя>, ""url": <адрес>, "priority": <приоритет>})`,
+	},
+	{
+		Command:     "stop_notifying",
+		Description: `Команда для остановки постинга статей`,
+	},
+	{
+		Command:     "start_notifying",
+		Description: `Команда для запуска постинга статей`,
 	},
 }
 

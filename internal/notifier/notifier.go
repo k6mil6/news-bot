@@ -2,14 +2,17 @@ package notifier
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/go-shiori/go-readability"
 	"github.com/k6mil6/news-bot/internal/botkit/markup"
 	"github.com/k6mil6/news-bot/internal/model"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -31,6 +34,8 @@ type Notifier struct {
 	sendInterval     time.Duration
 	lookupTimeWindow time.Duration
 	channelId        int64
+	pauseCond        *sync.Cond
+	paused           bool
 }
 
 func New(
@@ -48,10 +53,12 @@ func New(
 		sendInterval:     sendInterval,
 		lookupTimeWindow: lookupTimeWindow,
 		channelId:        channelId,
+		pauseCond:        sync.NewCond(new(sync.Mutex)),
 	}
 }
 
 func (n *Notifier) Start(ctx context.Context) error {
+	log.Println("[INFO] Starting notifier...")
 	ticker := time.NewTicker(n.sendInterval)
 	defer ticker.Stop()
 
@@ -62,6 +69,11 @@ func (n *Notifier) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ticker.C:
+			n.pauseCond.L.Lock()
+			for n.paused {
+				n.pauseCond.Wait()
+			}
+			n.pauseCond.L.Unlock()
 			if err := n.SelectAndSendArticle(ctx); err != nil {
 				return err
 			}
@@ -69,6 +81,31 @@ func (n *Notifier) Start(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
+}
+
+func (n *Notifier) Pause() error {
+	n.pauseCond.L.Lock()
+	defer n.pauseCond.L.Unlock()
+
+	if n.paused {
+		return errors.New("already paused")
+	}
+
+	n.paused = true
+	return nil
+}
+
+func (n *Notifier) Resume() error {
+	n.pauseCond.L.Lock()
+	defer n.pauseCond.L.Unlock()
+
+	if !n.paused {
+		return errors.New("already running")
+	}
+	n.paused = false
+	n.pauseCond.Signal()
+
+	return nil
 }
 
 func (n *Notifier) StopNotifyingFor(duration time.Duration) {

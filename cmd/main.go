@@ -73,45 +73,59 @@ func main() {
 	newsBot := botkit.New(botAPI)
 	newsBot.RegisterCmdView("start", bot.ViewCmdStart())
 	newsBot.RegisterCmdView(
-		"addsource",
+		"add_source",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
 			bot.ViewCmdAddSource(sourceStorage),
 		),
 	)
 	newsBot.RegisterCmdView(
-		"listsources",
+		"list_sources",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
 			bot.ViewCmdListSources(sourceStorage),
 		),
 	)
 	newsBot.RegisterCmdView(
-		"deletesource",
+		"delete_source",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
 			bot.ViewCmdDeleteSource(sourceStorage),
 		),
 	)
 	newsBot.RegisterCmdView(
-		"getsource",
+		"get_source",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
 			bot.ViewCmdGetSource(sourceStorage),
 		),
 	)
 	newsBot.RegisterCmdView(
-		"setpriority",
+		"set_priority",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
 			bot.ViewCmdSetPriority(sourceStorage),
 		),
 	)
 	newsBot.RegisterCmdView(
-		"stopnotifyingfor",
+		"stop_notifying_for",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
 			bot.ViewCmdStopNotifyingFor(notifier),
+		),
+	)
+	newsBot.RegisterCmdView(
+		"stop_notifying",
+		middleware.AdminOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdStopNotifying(notifier),
+		),
+	)
+	newsBot.RegisterCmdView(
+		"start_notifying",
+		middleware.AdminOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdStartNotifying(notifier),
 		),
 	)
 
@@ -140,6 +154,7 @@ func main() {
 
 			log.Println("[INFO] notifier stopped")
 		}
+
 	}(ctx)
 
 	if err := newsBot.Run(ctx); err != nil {

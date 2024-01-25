@@ -18,6 +18,7 @@ func ViewCmdStopNotifyingFor(stopper NotifierStopper) botkit.ViewFunc {
 		if err != nil {
 			return err
 		}
+
 		stopper.StopNotifyingFor(duration)
 
 		msg := tgbotapi.NewMessage(update.FromChat().ID, fmt.Sprintf("Постинг статей приостановлен на %s", duration))
