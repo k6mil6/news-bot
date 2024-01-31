@@ -1,6 +1,6 @@
 module github.com/k6mil6/news-bot
 
-go 1.21.0
+go 1.21
 
 require github.com/samber/lo v1.39.0
 
