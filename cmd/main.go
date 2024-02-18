@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/golang-migrate/migrate/v4"
 	"github.com/jmoiron/sqlx"
 	"github.com/k6mil6/news-bot/internal/bot"
 	"github.com/k6mil6/news-bot/internal/bot/middleware"
@@ -12,6 +13,7 @@ import (
 	"github.com/k6mil6/news-bot/internal/fetcher"
 	"github.com/k6mil6/news-bot/internal/notifier"
 	"github.com/k6mil6/news-bot/internal/storage"
+	"github.com/k6mil6/news-bot/internal/storage/migrations"
 	"github.com/k6mil6/news-bot/internal/summary"
 	_ "github.com/lib/pq"
 	"log"
@@ -25,6 +27,13 @@ func main() {
 	if err != nil {
 		log.Printf("[ERROR] failed to create bot api: %s", err)
 		return
+	}
+
+	if err := migrations.Start(config.Get().DatabaseDSN); err != nil {
+		if !errors.Is(err, migrate.ErrNoChange) {
+			log.Printf("[ERROR] failed to start migrations: %v", err)
+			return
+		}
 	}
 
 	db, err := sqlx.Connect("postgres", config.Get().DatabaseDSN)

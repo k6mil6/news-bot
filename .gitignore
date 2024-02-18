@@ -2,3 +2,4 @@
 /config.local.hcl
 /bin/
 .env
+/config.hcl

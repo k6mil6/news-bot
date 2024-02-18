@@ -18,7 +18,7 @@ type Config struct {
 	OpenAIKey            string        `hcl:"openai_key" env:"OPENAI_KEY"`
 	OpenAIPrompt         string        `hcl:"openai_prompt" env:"OPENAI_PROMPT"`
 	OpenAIModel          string        `hcl:"openai_model" env:"OPENAI_MODEL" default:"gpt-3.5-turbo"`
-	HTTPServerURL        string        `hcl:"http_server_url" env:"HTTP_SERVER_URL" default:"http://0.0.0.0:8888/"`
+	HTTPServerURL        string        `hcl:"http_server_url" env:"HTTP_SERVER_URL" default:"http://localhost:8888/"`
 }
 
 var (
