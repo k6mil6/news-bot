@@ -19,6 +19,7 @@ type Config struct {
 	OpenAIPrompt         string        `hcl:"openai_prompt" env:"OPENAI_PROMPT"`
 	OpenAIModel          string        `hcl:"openai_model" env:"OPENAI_MODEL" default:"gpt-3.5-turbo"`
 	HTTPServerURL        string        `hcl:"http_server_url" env:"HTTP_SERVER_URL" default:"http://localhost:8888/"`
+	MigrationPath        string        `hcl:"migration_path" env:"MIGRATION_PATH" default:"./internal/storage/migrations"`
 }
 
 var (

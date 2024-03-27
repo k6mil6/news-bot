@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/golang-migrate/migrate/v4"
 	"github.com/jmoiron/sqlx"
 	"github.com/k6mil6/news-bot/internal/bot"
 	"github.com/k6mil6/news-bot/internal/bot/middleware"
@@ -12,8 +11,9 @@ import (
 	"github.com/k6mil6/news-bot/internal/config"
 	"github.com/k6mil6/news-bot/internal/fetcher"
 	"github.com/k6mil6/news-bot/internal/notifier"
+	"github.com/k6mil6/news-bot/internal/state"
+	"github.com/k6mil6/news-bot/internal/state/handlers"
 	"github.com/k6mil6/news-bot/internal/storage"
-	"github.com/k6mil6/news-bot/internal/storage/migrations"
 	"github.com/k6mil6/news-bot/internal/summary"
 	_ "github.com/lib/pq"
 	"log"
@@ -27,13 +27,6 @@ func main() {
 	if err != nil {
 		log.Printf("[ERROR] failed to create bot api: %s", err)
 		return
-	}
-
-	if err := migrations.Start(config.Get().DatabaseDSN); err != nil {
-		if !errors.Is(err, migrate.ErrNoChange) {
-			log.Printf("[ERROR] failed to start migrations: %v", err)
-			return
-		}
 	}
 
 	db, err := sqlx.Connect("postgres", config.Get().DatabaseDSN)
@@ -51,7 +44,7 @@ func main() {
 	var (
 		articleStorage = storage.NewArticleStorage(db)
 		sourceStorage  = storage.NewSourceStorage(db)
-		fetcher        = fetcher.New(
+		f              = fetcher.New(
 			articleStorage,
 			sourceStorage,
 			config.Get().FetchInterval,
@@ -66,7 +59,7 @@ func main() {
 		summariser = summary.NewLocalSummariser(
 			config.Get().HTTPServerURL,
 		)
-		notifier = notifier.New(
+		n = notifier.New(
 			articleStorage,
 			summariser,
 			botAPI,
@@ -79,13 +72,15 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	newsBot := botkit.New(botAPI)
-	newsBot.RegisterCmdView("start", bot.ViewCmdStart())
+	stateMachine := state.NewMachine()
+
+	newsBot := botkit.New(botAPI, stateMachine)
+	newsBot.RegisterCmdView("start", bot.ViewCmdStart(stateMachine))
 	newsBot.RegisterCmdView(
 		"add_source",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
-			bot.ViewCmdAddSource(sourceStorage),
+			bot.ViewCmdAddSource(stateMachine),
 		),
 	)
 	newsBot.RegisterCmdView(
@@ -113,30 +108,35 @@ func main() {
 		"set_priority",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
-			bot.ViewCmdSetPriority(sourceStorage),
+			bot.ViewCmdSetPriority(stateMachine),
 		),
 	)
 	newsBot.RegisterCmdView(
 		"stop_notifying_for",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
-			bot.ViewCmdStopNotifyingFor(notifier),
+			bot.ViewCmdStopNotifyingFor(n),
 		),
 	)
 	newsBot.RegisterCmdView(
 		"stop_notifying",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
-			bot.ViewCmdStopNotifying(notifier),
+			bot.ViewCmdStopNotifying(n),
 		),
 	)
 	newsBot.RegisterCmdView(
 		"start_notifying",
 		middleware.AdminOnly(
 			config.Get().TelegramChannelID,
-			bot.ViewCmdStartNotifying(notifier),
+			bot.ViewCmdStartNotifying(n),
 		),
 	)
+
+	newsBot.RegisterStateView(state.WaitingForSourceName, handlers.ViewWaitingForSourceName(sourceStorage, stateMachine))
+	newsBot.RegisterStateView(state.WaitingForSourceURL, handlers.ViewWaitingForSourceURL(sourceStorage, stateMachine))
+	newsBot.RegisterStateView(state.WaitingForSourcePriority, handlers.ViewWaitingForSourcePriority(sourceStorage, stateMachine))
+	newsBot.RegisterStateView(state.WaitingForSourceIDAndPriority, handlers.ViewWaitingForSourceIDAndPriority(sourceStorage))
 
 	if err := bot.SetCommands(botAPI, config.Get().TelegramChannelID); err != nil {
 		log.Printf("[ERROR] failed to set commands: %s", err)
@@ -144,24 +144,24 @@ func main() {
 	}
 
 	go func(ctx context.Context) {
-		if err = fetcher.Start(ctx); err != nil {
+		if err = f.Start(ctx); err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Printf("[ERROR] failed to start fetcher: %s", err)
+				log.Printf("[ERROR] failed to start f: %s", err)
 				return
 			}
 
-			log.Println("[INFO] fetcher stopped")
+			log.Println("[INFO] f stopped")
 		}
 	}(ctx)
 
 	go func(ctx context.Context) {
-		if err = notifier.Start(ctx); err != nil {
+		if err = n.Start(ctx); err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Printf("[ERROR] failed to start notifier: %s", err)
+				log.Printf("[ERROR] failed to start n: %s", err)
 				return
 			}
 
-			log.Println("[INFO] notifier stopped")
+			log.Println("[INFO] n stopped")
 		}
 
 	}(ctx)

@@ -89,6 +89,33 @@ func (s *SourcePostgresStorage) SetPriority(ctx context.Context, id int64, prior
 	return err
 }
 
+func (s *SourcePostgresStorage) SetURL(ctx context.Context, id int64, url string) error {
+	conn, err := s.db.Connx(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	_, err = conn.ExecContext(ctx, `UPDATE sources SET feed_url = $1 WHERE id = $2`, url, id)
+
+	return err
+}
+
+func (s *SourcePostgresStorage) GetLatestID(ctx context.Context) (int64, error) {
+	conn, err := s.db.Connx(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close()
+
+	var id int64
+	if err := conn.GetContext(ctx, &id, `SELECT MAX(id) FROM sources`); err != nil {
+		return 0, err
+	}
+
+	return id, nil
+}
+
 func (s *SourcePostgresStorage) Delete(ctx context.Context, id int64) error {
 	conn, err := s.db.Connx(ctx)
 	if err != nil {

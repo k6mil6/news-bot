@@ -9,6 +9,10 @@ import (
 	"strconv"
 )
 
+type Response struct {
+	Content string `json:"content"`
+}
+
 type LocalSummariser struct {
 	url string
 }
@@ -35,7 +39,7 @@ func (s *LocalSummariser) Summarise(text string) (string, error) {
 		return "", err
 	}
 
-	req.Header.Set("Content-Type", "application/json") // установка заголовка Content-Type
+	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -48,5 +52,6 @@ func (s *LocalSummariser) Summarise(text string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return string(body), nil
 }

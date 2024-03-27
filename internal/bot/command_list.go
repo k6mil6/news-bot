@@ -19,12 +19,12 @@ var adminCommands = []tgbotapi.BotCommand{
 	},
 	{
 		Command:     "set_priority",
-		Description: `Команда для установки приоритета (/set_priority {"source_id": <идентификатор>, "priority": <приоритет>})`,
+		Description: `Команда для установки приоритета`,
 	},
-	{
-		Command:     "stop_notifying_for",
-		Description: "Команда для остановки постинга статей (/stop_notifying_for <длительность>)",
-	},
+	//{
+	//	Command:     "stop_notifying_for",
+	//	Description: "Команда для остановки постинга статей (/stop_notifying_for <длительность>)",
+	//},
 	{
 		Command:     "add_source",
 		Description: `Команда для добавления источника (/add_source {"name": <имя>, ""url": <адрес>, "priority": <приоритет>})`,

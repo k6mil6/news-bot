@@ -2,6 +2,7 @@ package botkit
 
 import (
 	"context"
+	"github.com/k6mil6/news-bot/internal/state"
 	"log"
 	"runtime/debug"
 	"time"
@@ -10,12 +11,17 @@ import (
 )
 
 type Bot struct {
-	api      *tgbotapi.BotAPI
-	cmdViews map[string]ViewFunc
+	api          *tgbotapi.BotAPI
+	cmdViews     map[string]ViewFunc
+	stateViews   map[state.State]StateViewFunc
+	stateMachine *state.Machine
 }
 
-func New(api *tgbotapi.BotAPI) *Bot {
-	return &Bot{api: api}
+func New(api *tgbotapi.BotAPI, stateMachine *state.Machine) *Bot {
+	return &Bot{
+		api:          api,
+		stateMachine: stateMachine,
+	}
 }
 
 func (b *Bot) RegisterCmdView(cmd string, view ViewFunc) {
@@ -24,6 +30,13 @@ func (b *Bot) RegisterCmdView(cmd string, view ViewFunc) {
 	}
 
 	b.cmdViews[cmd] = view
+}
+
+func (b *Bot) RegisterStateView(st state.State, view StateViewFunc) {
+	if b.stateViews == nil {
+		b.stateViews = make(map[state.State]StateViewFunc)
+	}
+	b.stateViews[st] = view
 }
 
 func (b *Bot) Run(ctx context.Context) error {
@@ -51,8 +64,26 @@ func (b *Bot) handleUpdate(ctx context.Context, update tgbotapi.Update) {
 		}
 	}()
 
-	if (update.Message == nil || !update.Message.IsCommand()) && update.CallbackQuery == nil {
-		return
+	if update.Message != nil && update.Message.Command() == "" {
+		log.Println("received message", "chat_id", update.Message.Chat.ID, "text", update.Message.Text, "from", update.SentFrom().ID)
+
+		st, ok := b.stateMachine.Get(update.SentFrom().ID)
+		if !ok {
+			log.Println("[ERROR] failed to get state", "user_id", update.SentFrom().ID)
+			if _, err := b.api.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Internal error")); err != nil {
+				log.Println("[ERROR] failed to send error message", err)
+			}
+			return
+		}
+
+		stateView := b.stateViews[st]
+
+		if err := stateView(ctx, b.api, update); err != nil {
+			log.Println("[ERROR] failed to execute state view", err)
+			if _, err := b.api.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "Internal error")); err != nil {
+				log.Println("[ERROR] failed to send error message", err)
+			}
+		}
 	}
 
 	var view ViewFunc
@@ -80,3 +111,4 @@ func (b *Bot) handleUpdate(ctx context.Context, update tgbotapi.Update) {
 }
 
 type ViewFunc func(ctx context.Context, bot *tgbotapi.BotAPI, update tgbotapi.Update) error
+type StateViewFunc func(ctx context.Context, bot *tgbotapi.BotAPI, update tgbotapi.Update) error

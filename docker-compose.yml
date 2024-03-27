@@ -1,17 +1,24 @@
 version: '3.1'
 
 services:
+  httpserver:
+    build:
+      context: https://github.com/k6mil6/gpt4free.git
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8888"
+  migrator:
+    build:
+      context: .
+      dockerfile: migrator.Dockerfile
+    depends_on:
+      - db
   bot:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: bot.Dockerfile
     depends_on:
       - db
-    ports:
-      - "5430:5432"
-    networks:
-      net:
-        ipv4_address: 192.167.240.2
   db:
     image: postgres:15
     restart: always
@@ -21,18 +28,9 @@ services:
       POSTGRES_DB: news_feed_bot
       PGDATA: /var/lib/postgresql/data/
     ports:
-      - "5431:5432"
+      - "5432:5432"
     volumes:
       - db:/var/lib/postgresql/data/
-    networks:
-      net:
-        ipv4_address: 192.167.240.3
-networks:
-  net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 192.167.240.0/24
 
 volumes:
   db:
